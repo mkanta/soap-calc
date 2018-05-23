@@ -27,6 +27,7 @@ dependencies:
 - monad-logger
 - text
 - time
+- optparse-applicative >= 0.14.2.0
 
 library:
   source-dirs: src
