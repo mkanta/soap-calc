@@ -1,3 +1,9 @@
+module CmdLine
+  (module CmdLine
+  ,module Options.Applicative
+  ,module Data.Semigroup
+  )
+  where
 -- TODO
 -- This is to contain the command line parsing routines using
 -- optparse-applicative
