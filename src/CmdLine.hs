@@ -1,7 +1,7 @@
 module CmdLine
   (module CmdLine
   ,module Options.Applicative
-  ,module Data.Semigroup
+  ,module Data.Semigroup --apparently only re-exports (<>)
   )
   where
 -- TODO
@@ -21,15 +21,15 @@ data Sample = Sample
 sample :: Parser Sample
 sample = Sample
       <$> strOption
-          ( long "hello"
+          ( long "hello" --doesn't have to be the same as the field name
          <> metavar "TARGET"
          <> help "Target for the greeting" )
       <*> switch
-          ( long "quiet"
+          ( long "quiet"--doesn't have to be the same as the field name
          <> short 'q'
          <> help "Whether to be quiet" )
       <*> option auto
-          ( long "enthusiasm"
+          ( long "enthusiasm"--doesn't have to be the same as the field name
          <> help "How enthusiastically to greet"
          <> showDefault
          <> value 1

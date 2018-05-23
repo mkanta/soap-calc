@@ -11,6 +11,7 @@ main = greet =<< execParser opts
      <> progDesc "Print a greeting for TARGET"
      <> header "hello - a test for optparse-applicative" )
 
+-- The function that does something with the value returned from the parser.
 greet :: Sample -> IO ()
 greet (Sample h False n) = putStrLn $ "Hello, " ++ h ++ replicate n '!'
 greet _ = return ()
