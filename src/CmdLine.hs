@@ -1,6 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE FlexibleInstances #-}
--- TODO: write option parser for FatOpts and use this in Main
+
 module CmdLine
   (module CmdLine
   ,module Opts           --Options.Applicative
