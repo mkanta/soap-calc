@@ -140,7 +140,7 @@ Generate a default database of saponification values from a list of tuples
 (fatname, lyefactor, potfactor) in DefaultDB
 
 \begin{code}
-tuple2SoapVal (fname, lyeFac, potFac) = SoapValue fname (LyeFactor (toRational lyeFac)) ((PotFactor  .toRational) potFac) -- both ways work
+tuple2SoapVal (fname, lyeFac, potFac) = SoapValue fname (LyeFactor (mkPercentage lyeFac)) (PotFactor (mkPercentage potFac)) 
 initDefaultDB dbfile = runSqlite dbfile $ do
   runMigration migrateAll
   insertMany_ (Prelude.map tuple2SoapVal DefaultDB.defaultList) 

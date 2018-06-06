@@ -3,7 +3,8 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE KindSignatures #-} --allow them in class declarations
-
+-- TODO make Percentage a fractional with recip=id and the proper fromRational
+-- maybe mkPositive should be called toPositive, dito for mkPercentage
 module Types (Positive
              ,mkPositive
              ,fromPositive
@@ -36,31 +37,49 @@ import Data.Ratio
 -- uses template haskell and needs to know about Percentage beforehand
 data Percentage = forall a.Real a => MkPercentage a
 
-newtype SomeFactor = SomeFactor Percentage
-newtype LyeFactor = LyeFactor Percentage 
+-- |showing a Percentage as a Double 
+instance Show Percentage where
+  show (MkPercentage x) = show (fromToRational x)
+
+-- |Dito for reading
+-- need to check if dval is in range, otherwise return a failed parse
+instance Read Percentage where
+  readsPrec _ s = case reads s ::[(Double,String)] of
+                       [(dval,rem)]|dval>=0.0 && dval<= 1.0 -> [(MkPercentage dval,rem)]
+                                   |otherwise -> []
+                       _ -> []
+-- |A helper function for converting Percentage to Fractional
+-- Note this needs to be here because of the splice below arising from
+-- derivePersistField
+fromToRational :: (Real a, Fractional c) => a -> c
+fromToRational = fromRational . toRational
+
+newtype LyeFactor = LyeFactor Percentage  deriving (Read, Show)
 derivePersistField "LyeFactor" -- ^this makes LyeFactor a valid DB datatype
 
--- |The Show instance for LyeFactor which just shows the embedded Double
-instance Show LyeFactor where
-   show (LyeFactor (MkPercentage x)) = show ((fromRational (toRational x))::Double)
+-- A Show instance for LyeFactor which just shows the embedded Double
+-- instance Show LyeFactor where
+   -- show (LyeFactor (MkPercentage x)) = show ((fromToRational x) :: Double)
 
--- |The Read instance for LyeFactor which packs a Double into a LyeFactor
-instance Read LyeFactor where
-  readsPrec _ s = case reads s ::[(Double,String)] of
-                       [(dval,rem)] -> [(LyeFactor (MkPercentage dval),rem)]
-                       _ -> []
-newtype PotFactor = PotFactor Percentage
-derivePersistField "PotFactor" --dito for PotFactor
+-- A Read instance for LyeFactor which packs a Double into a LyeFactor
+-- TODO: this is wrong: dval needs to be checked for range
+-- instance Read LyeFactor where
+  -- readsPrec _ s = case reads s ::[(Double,String)] of
+                       -- [(dval,rem)] -> [(LyeFactor (MkPercentage dval),rem)]
+                       -- _ -> []
+newtype PotFactor = PotFactor Percentage deriving (Read, Show)
+derivePersistField "PotFactor" -- ^make PotFactor a valid DB datatype
 
--- |The Show instance for PotFactor which just shows the embedded Double
-instance Show PotFactor where
-   show (PotFactor (MkPercentage x)) = show ((fromRational (toRational x))::Double)
+-- A Show instance for PotFactor which just shows the embedded Double
+-- instance Show PotFactor where
+   -- show (PotFactor (MkPercentage x)) = show ((fromToRational x)::Double)
 
--- |The Read instance for PotFactor which packs a Double into a LyeFactor
-instance Read PotFactor where
-  readsPrec _ s = case reads s ::[(Double,String)] of
-                       [(dval,rem)] -> [(PotFactor (MkPercentage dval),rem)]
-                       _ -> []
+-- A Read instance for PotFactor which packs a Double into a LyeFactor
+-- TODO: this is wrong: dval needs to be checked for range
+-- instance Read PotFactor where
+  -- readsPrec _ s = case reads s ::[(Double,String)] of
+                       -- [(dval,rem)] -> [(PotFactor (MkPercentage dval),rem)]
+                       -- _ -> []
 -- TODO:make sure NewPositive is not exported
 -- The way it stands, something like NewPositive "5.1" would be possible but
 -- this is acceptable since NewPositive is not exported. We're using newtype
@@ -76,7 +95,7 @@ newtype Positive a = NewPositive a deriving (Ord,Real,Eq,Show)
 mkPositive :: Real a => a -> Positive a
 mkPositive x|x > 0 = NewPositive x
             | otherwise = E.throw $ userError "No Positives from negative Ord"
--- TODO:Perhaps it would be better to have a
+-- TODO:Perhaps add a
 -- mkPositiveIO :: Real a => a -> IO (Positive a) where we use ioError
 fromPositive :: Positive a -> a
 fromPositive (NewPositive x) = x
@@ -100,13 +119,12 @@ instance (Num a, Ord a) => Num (Positive a) where
 -- | A constructor for Percentage, this should be the only way to construct
 -- a Percentage outside of this module because its value should be between
 -- 0 and 1.
-instance Show Percentage where
-  show (MkPercentage x) = show (toRational x)
 mkPercentage :: Real a => a -> Percentage
 mkPercentage x 
   | x>0 && numerator y <= denominator y = MkPercentage x 
   | otherwise = error "Percentage out of range"
   where y=toRational x
+
 -- | Multiplication of a Percentage with a Real to get a Fractional.
 -- Using just * would make it ambiguous. To use * without ambiguity it would
 -- need to be defined in an explicit instance of Num but then the types
