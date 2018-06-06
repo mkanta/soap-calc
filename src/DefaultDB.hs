@@ -7,6 +7,8 @@ module DefaultDB
 
 import Data.Text
 
+-- TODO: maybe this should be a [(Text,Text,Text)] for equal footing with
+-- databases where the inputs are essentially strings
 defaultList :: Fractional a => [(Text,a,a)]
 defaultList=[
   ("Almond Oil",0.1367,0.1925)
