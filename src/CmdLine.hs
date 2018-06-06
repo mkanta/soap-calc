@@ -32,25 +32,18 @@ data FatSpec = FatSpec {
 instance Read FatSpec where
   readsPrec _ = readP_to_S parsePFatSpec
   readList = readP_to_S parsePFatSpecList
--- The "name:number" fields separated by comma,
--- TODO semicolon, perhaps white space, should give a [FatSpec]
--- TODO do we need a readList for [FatSpec] or what is the default?
--- write Main to parse for FatOpts and then test
--- There seems to be no requirement to implement readList when defining
--- a Read instance
--- instance Read [FatSpec] where
--- readsPrec = readP_to_S (sepBy1 parsePFatSpec fatSpecSep)
--- TODO: readList needs to return a one element list because auto doesn't
--- accept ambiguous parses, only one element lists [(value,"")] this needs to
--- be changed to something more efficient, that Prelude.last thing is only
--- for testing
--- 
+
 -- |The parser for Fat Specifications as in FatSpec. It reacts to strings of
 -- the form "name:amount" where name is parsed liberally as anything not
 -- containing the character ':'. It needs to allow for white space for things
 -- such as "Olive Oil". Amount is parsed as a Double
 -- White spaces surrounding the name are stripped before constructing the
 -- FatSpec
+-- TODO: if name=="" there should be a pfail, should we check here whether
+-- the name is in the database? Probably not because ReadP is deficient
+-- when it comes to error reporting. On the other hand, when parsing a list
+-- we'd like to know which one is not in the database
+-- TODO: and provide alternatives.
 parsePFatSpec :: ReadP FatSpec
 parsePFatSpec = do
   name <- munch1 (/= ':') -- ^ This eats white space, no need for skipSpaces
@@ -72,23 +65,33 @@ parsePDouble :: ReadP Double
 parsePDouble = readS_to_P (reads::String ->[(Double,String)])
 
 -- |Separator for lists of FatSpec fat specifications.
+-- TODO: maybe add some more list separators, using something like
+-- satisfy (`elem` sepList) where sepList is a list of separators
+-- instead of char ','
 fatSpecSep :: ReadP Char
 fatSpecSep = do
   skipSpaces 
   char ','
 
+-- |The parser for lists of FatSpec entries. Note that sepBy1 introduces
+-- nondeterminism due to its use of many. Since option auto only accepts
+-- unique parses with no input left, eof is used to get rid of the partial
+-- parses.
+-- TODO:there may be a more efficient way to do this, such as a recursion
+-- using <++ rather than +++ as used by many.
 parsePFatSpecList :: ReadP [FatSpec]
 parsePFatSpecList = do
   p <- sepBy1 parsePFatSpec fatSpecSep
-  eof --This is the magic to get rid of the partial parses
+  eof -- ^ This is the magic to get rid of the partial parses
   return p
-  
-newtype FatOpts = FatOpts --TODO use data FatOpts=... more fields expected!
+
+-- |The type to be filled by command-line option parsing
+-- TODO use data FatOpts=... more fields expected!
+newtype FatOpts = FatOpts 
    { fatSpecs :: [FatSpec]
    } deriving Show
    
 -- |Parsing command line for fat amounts via option --fatspecs
---  TODO: check if this works
 fatopts :: Parser FatOpts
 fatopts = FatOpts
      <$> Opts.option auto
@@ -96,6 +99,7 @@ fatopts = FatOpts
           <> help "Fat types and weights"
          )
 -- Below is an example
+{-
 -- define a datatype to be filled with the data, for example
 data Sample = Sample
   { hello      :: String
@@ -104,7 +108,6 @@ data Sample = Sample
 -- This is meant to be filled by a string option, a boolean and an integer
 -- To fill it, write a parser
 
-{-
 sample :: Parser Sample
 sample = Sample
       <$> strOption
