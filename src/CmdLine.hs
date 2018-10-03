@@ -151,3 +151,20 @@ greet _ = return ()
 -- helper which adds a --help option. The execParser is run on the ParserInfo
 -- so created and returns a Sample packed in IO which is then fed into the
 -- greet function.
+-- To parse a string use
+-- execParserPure defaultParserPrefs opts optionstring
+-- and apply renderFailure as in handleParseResult but without
+-- the IO to create a custom error message
+{- Multiple use of an option:
+data MyOptions = MyOptions {
+    aFiles :: [String]
+  , bFiles :: [String] }
+
+multiString desc = concat <$> some single
+  where single = option (str >>= return . words) desc
+
+config :: Parser MyOptions
+config = MyOptions
+     <$> multiString (short 'a' <> long "aFiles" <> help "Use quotes/multiple")
+     <*> multiString (short 'b' <> long "bFiles" <> help "Use quotes/multiple")
+-}

@@ -28,6 +28,8 @@ dependencies:
 - text
 - time
 - optparse-applicative >= 0.14.2.0
+- gtk3 >= 0.14.9
+- transformers  >= 0.5.2.0
 
 library:
   source-dirs: src

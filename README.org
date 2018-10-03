@@ -1,6 +1,8 @@
 # Readme file, README.md should be generated from this.
 # use M-x org-gfm-export-to-markdown
 # to get a github compliant README.md from this.
+calculations branch: private branch to implement all the soap calculations in 
+SoapLib.lhs and make necessary changes resulting from that in other modules
 * Soap Calculator
 
 A program to calculate the amount of lye or potash required to make soap from
@@ -8,4 +10,3 @@ various oils.
 
 This requires haskell stack and gtk for the graphical version. At the moment
 this is not very useful as only library functions are beginning to take shape.
-
