@@ -2,11 +2,17 @@ module Main where
 
 import Lib
 import CmdLine
+import Gui
 
+-- TODO: this should runGui only if there is a -i, --interactive flag set?
+--       and then initialise runGui with fat options if any?
+--       or when there are no options on the command line at all.
+main :: IO ()
+main = runGui
+
+{-- This should go into CmdLine.hs under runCmdLine
 -- This accepts --fatspecs "oiltype:value, oiltype:value,..." options ie
 -- the fatspecs option expects a comma-separated list of oiltype:value fields
-main :: IO ()
-main =
   greet =<< execParser opts
   where
     opts = info (fatopts <**> helper)
@@ -22,3 +28,4 @@ greet = putStrLn . show
 -- query to get the soap values and complains if some are not in the
 -- database. Need a datatype consisting of a FatSpec and corresponding
 -- lye or potash factors.
+--}

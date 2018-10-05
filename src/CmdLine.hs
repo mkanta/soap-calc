@@ -13,8 +13,21 @@ module CmdLine
 import Options.Applicative as Opts
 import Data.Semigroup ((<>))
 import Text.ParserCombinators.ReadP
+import Data.String
 import Data.Text as T
 
+-- TODO rewrite parser for fat specifications to use --fatspec multiple
+-- times rather than --fatspecs once.
+
+-- |Run from command line using option --fatspec possibly multiple times from
+-- command line, this should parse input and complain or calculate
+runCmdLine :: IO()
+runCmdLine = undefined
+
+-- |Same as runCmdLine but with option string as argument ignoring
+-- options from command line.
+runCmdLineWith :: IsString s => s-> IO()
+runCmdLineWith = undefined
 -- TODO: the amount should be Positive, not Rational. How to handle errors?
 -- In IO because the amount comes from an option string. FatOpts should have
 -- an option for water amounts, set to a Percentage of 0.33 by default

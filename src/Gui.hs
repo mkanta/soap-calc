@@ -1,12 +1,12 @@
 module Gui
-    ( addFatAction2
-    , okReadAction
+    (runGui
     ) where
 
 import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Trans.Maybe
 import Control.Monad.Trans.State --use Lazy?
+import Data.String
 -- import Data.IORef
 -- import System.Glib.UTFString.GLibString --required for type of fatEntryRow2
                                            --otherwise no haddock for this?
@@ -14,8 +14,29 @@ import Graphics.UI.Gtk hiding (Action, backspace)
 
 -- |Run the graphical user interface to input the fat information
 runGui :: IO()
-runGui = undefined
+runGui = do
+  void initGUI
+  builder <- builderNew
+  builderAddFromFile builder "gui.glade" -- proper location of glade files?
+  window <- builderGetObject builder castToWindow "mainWindow"
+  okButton <- builderGetObject builder castToButton "okButton"
+  cancelButton <- builderGetObject builder castToButton "cancelButton"
+  addButton <- builderGetObject builder castToButton "addButton"
+  --------------------Event Connections----------------------------------
+  on window deleteEvent $ do
+    liftIO $ putStrLn "Got deleteEvent on main window"
+    liftIO mainQuit
+    return False
+  -- this should call widgetDestroy on the toplevel
+  on cancelButton buttonActivated $ liftIO mainQuit
+  on okButton buttonActivated $ okReadAction builder
+  on addButton buttonActivated $ addFatAction2 builder
+  widgetShowAll window  
+  mainGUI               
 
+-- |Same as runGui but using option string to initialise fat entry fields
+runGuiWith :: IsString s => s -> IO()
+runGuiWith = undefined
 -------------------------data entry field construction--------------------
 -- | a rewrite of boxPackStart for chaining
 boxPacker
