@@ -8,7 +8,8 @@ import Gui
 --       and then initialise runGui with fat options if any?
 --       or when there are no options on the command line at all.
 main :: IO ()
-main = runGui
+main = runCmdLine
+-- main = runGui
 
 {-- This should go into CmdLine.hs under runCmdLine
 -- This accepts --fatspecs "oiltype:value, oiltype:value,..." options ie

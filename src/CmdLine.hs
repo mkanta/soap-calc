@@ -22,7 +22,13 @@ import Data.Text as T
 -- |Run from command line using option --fatspec possibly multiple times from
 -- command line, this should parse input and complain or calculate
 runCmdLine :: IO()
-runCmdLine = undefined
+runCmdLine = execParser opts >>= putStrLn . show
+  where
+    opts = info (multiFatOpts <**> helper)
+      ( fullDesc
+     <> progDesc "Print a fat specification"
+     <> header "fat-opts - a test for optparse-applicative" )
+
 
 -- |Same as runCmdLine but with option string as argument ignoring
 -- options from command line.
@@ -111,6 +117,16 @@ fatopts = FatOpts
          ( long "fatspecs"
           <> help "Fat types and weights"
          )
+-- |Parse for multiple occurences of datatype which is a Read
+multiRead :: Read a => Mod OptionFields [a] -> Parser [a]
+multiRead desc = Prelude.concat <$> some single
+   where single = Opts.option (Opts.auto >>= \x -> return [x]) desc
+
+-- |Parse for multiple occurences of --fatspec
+multiFatOpts :: Parser FatOpts
+multiFatOpts = FatOpts
+   <$> multiRead (Opts.long "fatspec" <> Opts.help "Fat types and weight")
+   
 -- Below is an example
 {-
 -- define a datatype to be filled with the data, for example
