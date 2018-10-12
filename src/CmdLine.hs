@@ -16,11 +16,9 @@ import Text.ParserCombinators.ReadP
 import Data.String
 import Data.Text as T
 
--- TODO rewrite parser for fat specifications to use --fatspec multiple
--- times rather than --fatspecs once.
-
--- |Run from command line using option --fatspec possibly multiple times from
--- command line, this should parse input and complain or calculate
+-- |Run from command line using option --fatspec <fatname>:<amount> possibly
+-- multiple times on command line, this should parse input and complain or
+-- calculate
 runCmdLine :: IO()
 runCmdLine = execParser opts >>= putStrLn . show
   where
@@ -29,11 +27,36 @@ runCmdLine = execParser opts >>= putStrLn . show
      <> progDesc "Print a fat specification"
      <> header "fat-opts - a test for optparse-applicative" )
 
-
+execParseStrings = execParserPure defaultPrefs opts 
+  where
+     opts = info (multiFatOpts <**> helper)
+       ( fullDesc
+      <> progDesc "Print a fat specification"
+      <> header "fat-opts - a test for optparse-applicative" )
+   
 -- |Same as runCmdLine but with option string as argument ignoring
--- options from command line.
+-- options from command line. This should probably be [s] -> IO()
+-- because getArgs from System.Environment returns IO [String]
 runCmdLineWith :: IsString s => s-> IO()
 runCmdLineWith = undefined
+
+-- |Parse for multiple occurences of --fatspec
+multiFatOpts :: Parser FatOpts
+multiFatOpts = FatOpts
+   <$> multiRead (Opts.long "fatspec" <> Opts.help "Fat name and weight as name:double")
+   
+-- |The type to be filled by command-line option parsing
+-- TODO use data FatOpts=... more fields expected!
+newtype FatOpts = FatOpts 
+   { fatSpecs :: [FatSpec]
+   } deriving Show
+
+-- |Parse for multiple occurences of datatype which is a Read
+multiRead :: Read a => Mod OptionFields [a] -> Parser [a]
+multiRead desc = Prelude.concat <$> some single
+   where single = Opts.option (Opts.auto >>= \x -> return [x]) desc
+
+   
 -- TODO: the amount should be Positive, not Rational. How to handle errors?
 -- In IO because the amount comes from an option string. FatOpts should have
 -- an option for water amounts, set to a Percentage of 0.33 by default
@@ -62,7 +85,7 @@ instance Read FatSpec where
 -- the name is in the database? Probably not because ReadP is deficient
 -- when it comes to error reporting. On the other hand, when parsing a list
 -- we'd like to know which one is not in the database
--- TODO: and provide alternatives.
+-- and provide alternatives.
 parsePFatSpec :: ReadP FatSpec
 parsePFatSpec = do
   name <- munch1 (/= ':') -- ^ This eats white space, no need for skipSpaces
@@ -104,11 +127,6 @@ parsePFatSpecList = do
   eof -- ^ This is the magic to get rid of the partial parses
   return p
 
--- |The type to be filled by command-line option parsing
--- TODO use data FatOpts=... more fields expected!
-newtype FatOpts = FatOpts 
-   { fatSpecs :: [FatSpec]
-   } deriving Show
    
 -- |Parsing command line for fat amounts via option --fatspecs
 fatopts :: Parser FatOpts
@@ -117,15 +135,6 @@ fatopts = FatOpts
          ( long "fatspecs"
           <> help "Fat types and weights"
          )
--- |Parse for multiple occurences of datatype which is a Read
-multiRead :: Read a => Mod OptionFields [a] -> Parser [a]
-multiRead desc = Prelude.concat <$> some single
-   where single = Opts.option (Opts.auto >>= \x -> return [x]) desc
-
--- |Parse for multiple occurences of --fatspec
-multiFatOpts :: Parser FatOpts
-multiFatOpts = FatOpts
-   <$> multiRead (Opts.long "fatspec" <> Opts.help "Fat types and weight")
    
 -- Below is an example
 {-

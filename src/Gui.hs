@@ -1,5 +1,6 @@
 module Gui
     (runGui
+    ,stateFuncL --testing
     ) where
 
 import Control.Monad
@@ -11,6 +12,8 @@ import Data.String
 -- import System.Glib.UTFString.GLibString --required for type of fatEntryRow2
                                            --otherwise no haddock for this?
 import Graphics.UI.Gtk hiding (Action, backspace)
+import CmdLine (execParseStrings)
+import Options.Applicative (handleParseResult)
 
 -- |Run the graphical user interface to input the fat information
 runGui :: IO()
@@ -98,6 +101,7 @@ addDeleteButton2 hb =
 -------------------------------data extraction---------------------------------
 -- |State transition function for creating StateT monad to pass string as
 -- state and list of row-boxes as values in a StateT String IO monad
+-- Deprecated, use stateFuncL to conform with getArgs usage
 stateFunc :: GObjectClass a => [a] -> [Char] -> IO ([a], [Char])
 stateFunc (b:r) s|s=="" = getText b >>= \str -> return (r,"--fatspec " ++ str)
              |otherwise = getText b >>= \str -> return (r,s ++ ":" ++ str)
@@ -105,24 +109,46 @@ stateFunc (b:r) s|s=="" = getText b >>= \str -> return (r,"--fatspec " ++ str)
                    etext (_:etrt:_) = entryGetText $ castToEntry etrt
                    etext _ = error "etext not receiving proper row"
 stateFunc [] s = return ([],s) -- TODO: think about this
+
+-- |State transition function for creating StateT monad to pass [String] as
+-- state and list of row-boxes as values in a StateT [String] IO monad
+-- to produce output the same way getArgs would as a list of strings
+stateFuncL :: GObjectClass obj => [obj] -> [[Char]] -> IO ([obj], [[Char]])
+stateFuncL (b:r) s|s==[] = getText b >>= \str -> return (r,["--fatspec",str])
+                  |otherwise = getText b >>= \str -> return (r,init s ++ [last s ++ ":" ++ str])
+             where getText c= containerGetChildren (castToContainer c) >>= etext
+                   etext (_:etrt:_) = entryGetText $ castToEntry etrt
+                   etext _ = error "etext not receiving proper row"
+stateFuncL [] s = return ([],s) -- TODO: think about this
 -- |Extracting fat information from the fat entry, which consists of
 -- two vboxes representing the fat-type and fat-amount rows, respectively,
 -- which in turn consist of subwidgets, the second one being the text entry
 -- field of interest. This is actually used as getFatInfoM :: VBox -> IO String.
-getFatInfoM :: ContainerClass self => self -> IO [Char]
-getFatInfoM b = containerGetChildren b >>= \cl -> execStateT (extractor cl >>= extractor) ""
-  where extractor  = StateT . stateFunc
+getFatInfoM :: ContainerClass self => self -> IO [[Char]]
+getFatInfoM b = containerGetChildren b >>= \cl -> execStateT (extractor cl >>= extractor) []
+  where extractor  = StateT . stateFuncL
 
 -- |action for ok-button: read the contents of the fat-entry children
 -- Note: these should be fed into an option-checker rather than a mere
 -- putStrLn . show, with a complaint-dialog if things go wrong
+-- TODO:this doesn't work yet the list going into processFatInfo should
+-- be of the form ["--fatspec","fat1:0.5","--fatspec","fat2:2.0", ...]
+-- because getArgs splits at unquoted whitespace, so this needs to be folded
+-- This has to be changed in the stateFunc
 okReadAction :: Builder -> IO ()
 okReadAction b = do
   entries <-builderGetObject b castToContainer "entryBoxContainer"
-  containerGetChildren entries >>= foldM foldFatInfo "" >>= (putStrLn . show)
+  containerGetChildren entries >>= foldM foldFatInfo [] >>= processFatInfo
   return ()
 
--- |Function to foldM an IO [Children] to concatenate the IO String results
--- from getFatInfo. Since containerGetChildren returns widgets, they have
+-- handleParseResult is a bit radical because it terminates the whole thing
+-- in case of parse errors, it should just complain
+-- TODO: reimplement handleParseResult so error messages can be used
+-- for error dialogs and correct parses for calculations
+processFatInfo = handleParseResult . execParseStrings
+
+-- |Function to foldM an IO [Children] to concatenate the IO [String] results
+-- from getFatInfoM. Since containerGetChildren returns widgets, they have
 -- to be cast back to containers in order to extract their children in return.
-foldFatInfo str box = getFatInfoM (castToContainer box) >>= \nstr -> return (str++" "++nstr)
+-- TODO: this should probably be replaced by concatMapM and getFatInfoM
+foldFatInfo strl box = getFatInfoM (castToContainer box) >>= \nstrl -> return (strl++nstrl)
