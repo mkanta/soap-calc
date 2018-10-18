@@ -24,15 +24,15 @@ runCmdLine = execParser opts >>= putStrLn . show
   where
     opts = info (multiFatOpts <**> helper)
       ( fullDesc
-     <> progDesc "Print a fat specification"
-     <> header "fat-opts - a test for optparse-applicative" )
+     <> progDesc "Soap Calculator"
+     <> header "Soap Calculator" )
 
 execParseStrings = execParserPure defaultPrefs opts 
   where
      opts = info (multiFatOpts <**> helper)
        ( fullDesc
-      <> progDesc "Print a fat specification"
-      <> header "fat-opts - a test for optparse-applicative" )
+      <> progDesc "Soap Calculator"
+      <> header "Soap Calculator" )
    
 -- |Same as runCmdLine but with option string as argument ignoring
 -- options from command line. This should probably be [s] -> IO()

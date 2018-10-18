@@ -13,7 +13,8 @@ import Data.String
                                            --otherwise no haddock for this?
 import Graphics.UI.Gtk hiding (Action, backspace)
 import CmdLine (execParseStrings)
-import Options.Applicative (handleParseResult)
+import Options.Applicative (handleParseResult, ParserFailure(..), ParserResult(..))
+import Options.Applicative.Help.Types
 
 -- |Run the graphical user interface to input the fat information
 runGui :: IO()
@@ -138,15 +139,27 @@ getFatInfoM b = containerGetChildren b >>= \cl -> execStateT (extractor cl >>= e
 okReadAction :: Builder -> IO ()
 okReadAction b = do
   entries <-builderGetObject b castToContainer "entryBoxContainer"
-  containerGetChildren entries >>= foldM foldFatInfo [] >>= processFatInfo
+  top <- builderGetObject b castToWindow "mainWindow"
+  containerGetChildren entries >>= foldM foldFatInfo [] >>= processFatInfo top
   return ()
 
 -- handleParseResult is a bit radical because it terminates the whole thing
 -- in case of parse errors, it should just complain
 -- TODO: reimplement handleParseResult so error messages can be used
 -- for error dialogs and correct parses for calculations
-processFatInfo = handleParseResult . execParseStrings
-
+processFatInfo parent = processParseResult parent . execParseStrings
+  where
+    processParseResult p (Success a) = messageDialogNew (Just p) [DialogModal] MessageInfo ButtonsOk "Calculating Ingredients" >>= \dlg -> dialogRun dlg >> widgetDestroy dlg
+    processParseResult p (Failure pf) =messageDialogNew (Just p) [DialogModal] MessageWarning ButtonsOk (show pf) >>= \dlg -> dialogRun dlg >> widgetDestroy dlg
+    -- processParseResult (Success a) = putStrLn $ "Parse ok: got " ++ show a
+    -- processParseResult (Failure pf) = putStrLn "Parse is no good"
+    -- processParseResult (Failure pf) = putStrLn (show pf)
+    -- processParseResult (Failure (ParserFailure ph)) = putStrLn (show (getParserHelper ph))
+-- ph :: String-> (ParserHelp, ExitCode, Integer) use as ph "error message"
+-- exitFailure :: String -> (ParserHelp, ExitCode,Integer) where the
+-- String is what comes after the Usage:, its default being "<program>".
+getParserHelper pex = let fst3 (f,_,_) = f in
+                         fst3 (pex "Failure String")
 -- |Function to foldM an IO [Children] to concatenate the IO [String] results
 -- from getFatInfoM. Since containerGetChildren returns widgets, they have
 -- to be cast back to containers in order to extract their children in return.
