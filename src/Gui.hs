@@ -1,3 +1,4 @@
+-- {-# LANGUAGE OverloadedStrings #-}
 module Gui
     (runGui
     ,stateFuncL --testing
@@ -8,6 +9,8 @@ import Control.Monad.IO.Class
 import Control.Monad.Trans.Maybe
 import Control.Monad.Trans.State --use Lazy?
 import Data.String
+import Data.Text (pack, unpack, stripPrefix, split, strip)
+import Data.Text.Internal.Search (indices)
 -- import Data.IORef
 -- import System.Glib.UTFString.GLibString --required for type of fatEntryRow2
                                            --otherwise no haddock for this?
@@ -130,12 +133,8 @@ getFatInfoM b = containerGetChildren b >>= \cl -> execStateT (extractor cl >>= e
   where extractor  = StateT . stateFuncL
 
 -- |action for ok-button: read the contents of the fat-entry children
--- Note: these should be fed into an option-checker rather than a mere
--- putStrLn . show, with a complaint-dialog if things go wrong
--- TODO:this doesn't work yet the list going into processFatInfo should
--- be of the form ["--fatspec","fat1:0.5","--fatspec","fat2:2.0", ...]
--- because getArgs splits at unquoted whitespace, so this needs to be folded
--- This has to be changed in the stateFunc
+-- Using the top-window as transient parent for dialogs to avoid
+-- complaints about this.
 okReadAction :: Builder -> IO ()
 okReadAction b = do
   entries <-builderGetObject b castToContainer "entryBoxContainer"
@@ -143,14 +142,30 @@ okReadAction b = do
   containerGetChildren entries >>= foldM foldFatInfo [] >>= processFatInfo top
   return ()
 
--- handleParseResult is a bit radical because it terminates the whole thing
--- in case of parse errors, it should just complain
--- TODO: reimplement handleParseResult so error messages can be used
--- for error dialogs and correct parses for calculations
+-- TODO: implement @translate@ below to get meaningful error messages
+--       make sure the amounts are positive
+--       make sure the fat-types are in the database or ask for saponification
+--       implement a processing function to be called on successful
+--       parses
 processFatInfo parent = processParseResult parent . execParseStrings
   where
     processParseResult p (Success a) = messageDialogNew (Just p) [DialogModal] MessageInfo ButtonsOk "Calculating Ingredients" >>= \dlg -> dialogRun dlg >> widgetDestroy dlg
-    processParseResult p (Failure pf) =messageDialogNew (Just p) [DialogModal] MessageWarning ButtonsOk (show pf) >>= \dlg -> dialogRun dlg >> widgetDestroy dlg
+    processParseResult p (Failure pf) =messageDialogNew (Just p) [DialogModal] MessageWarning ButtonsOk (translate pf) >>= \dlg -> dialogRun dlg >> widgetDestroy dlg
+
+-- Translate error message from cmdline to something that makes sense in the
+-- GUI.
+translate msg = case failFields msg of
+  (f:_)|unpack (strip f) == "`" -> "Missing fat name in an entry field"
+  (fn:(fa:_))| unpack (strip fa) =="'" -> "Missing amount for fat name "++ unpack fn ++ "'"
+             | otherwise -> "Unparseable amount for fatname " ++ unpack fn ++ "' and amount `"++unpack fa 
+   
+-- get the failed fields from the error message
+failFields fmsg = case stripPrefix prfx fstLine of
+  Just fld -> split (== ':') fld
+  Nothing -> [] --this should complain, programming error
+  where
+         prfx = pack "ParserFailure (option --fatspec: cannot parse value"
+         fstLine = pack $ head $ lines (show fmsg)
     -- processParseResult (Success a) = putStrLn $ "Parse ok: got " ++ show a
     -- processParseResult (Failure pf) = putStrLn "Parse is no good"
     -- processParseResult (Failure pf) = putStrLn (show pf)
