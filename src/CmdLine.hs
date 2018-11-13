@@ -1,11 +1,14 @@
 {-# LANGUAGE OverloadedStrings #-}
-
+-- TODO: this exports too much, needs some clean-up
 module CmdLine
   (module CmdLine
   ,module Opts           --Options.Applicative
   ,module Data.Semigroup --apparently only re-exports (<>)
   )
   where
+
+-- TODO: rewrite this to use Parsec or MegaParsec parsers instead
+-- of ReadP, use eitherReader to integrat into optparse
 
 -- This is to contain the command line parsing routines using
 -- optparse-applicative
