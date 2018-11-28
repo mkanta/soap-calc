@@ -40,7 +40,7 @@ import DefaultDB
 -- import Database.Persist hiding ((==.)) -- probably hiding because of esqueleto
 import Database.Persist 
 import Database.Persist.Sqlite (runSqlite, runMigration)
-import Database.Persist.Types (entityVal)
+import Database.Persist.Types (entityVal,Filter(..))
 import Database.Persist.TH
 \end{code}
 The database schema, a SoapValue table with the type of fat, the saponification
@@ -131,6 +131,20 @@ soapValues dbfile fatNames = runSqlite dbfile $ do
   selectList [SoapValueFatType <-. fatNames] [] >>= return . Prelude.map entityVal
 \end{code}
 This returns an m [SoapValue].
+
+In order to perform a LIKE query a filter using a backend specific operator.
+\begin{code}
+likeFilter field val = Filter field (Left $ T.concat ["%",val,"%"])
+                                (BackendSpecificFilter "like")
+\end{code}
+Maybe it's "LIKE" instead of "like" or, at least for Postgres backends
+"ILIKE". See
+https://stackoverflow.com/questions/11048143/example-of-persistent-with-backend-specific-operator
+This can then be used in a select query like so:
+\begin{code}
+selectLike val field = selectList [likeFilter field val] []
+\end{code}
+
 TODO: The result should be checked for completeness, ie all fatNames found
 returning a list of missing fats. First step: comparing lengths of fatNames
 vs list returned. If that fails, call a difference function that returns a

@@ -38,8 +38,8 @@ lexeme = L.lexeme space
 --   Parse a positive number, accepts integer or double input optionally
 --   followed by white space, the @lexeme@ part and
 --   outputs it as a double.
-positive :: Parsec Void T.Text Double
-positive = lexeme $ try L.float <|> (fromIntegral <$> L.decimal)
+positive :: Parsec Void T.Text Rational
+positive = toRational <$> (lexeme $ try L.float <|> (fromIntegral <$> L.decimal))
 
 -- |A Helper function:
 -- parse2Eof p is the same as parser p followed by eof but returning
@@ -54,5 +54,5 @@ data FatSpecD = FatSpecD {
   ,famount :: Double
   }
 -- |The mega-parser for the fat specification.
-fatSpecDParser :: Parsec Void T.Text FatSpecD
-fatSpecDParser = FatSpecD <$> (parse2Colon) <*> (try (space >> parse2Eof positive) <?> "positive double or integer")
+fatSpecParser :: Parsec Void T.Text FatSpec
+fatSpecParser = FatSpec <$> (parse2Colon) <*> (try (space >> parse2Eof positive) <?> "positive double or integer")
