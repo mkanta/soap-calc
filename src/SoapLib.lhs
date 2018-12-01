@@ -21,6 +21,7 @@ https://www.yesodweb.com/book/persistent
 {-# LANGUAGE TypeFamilies #-}
 module SoapLib
   ( soapValues
+  , soapValuesLike    -- selecting with LIKE
   , initDefaultDB     -- default database if nothing else can be found
   , tuple2SoapVal     -- this is for debugging only
   , lyeUpdate     -- this is for debugging only
@@ -135,14 +136,31 @@ This returns an m [SoapValue].
 In order to perform a LIKE query a filter using a backend specific operator.
 \begin{code}
 likeFilter field val = Filter field (Left $ T.concat ["%",val,"%"])
-                                (BackendSpecificFilter "like")
+                                (BackendSpecificFilter "LIKE")
 \end{code}
-Maybe it's "LIKE" instead of "like" or, at least for Postgres backends
-"ILIKE". See
-https://stackoverflow.com/questions/11048143/example-of-persistent-with-backend-specific-operator
-This can then be used in a select query like so:
+It doesn't  matter whether it is "LIKE" or "like" because this is sent
+verbatim to the sqlite backend which accepts both. However, "ILIKE"
+doesn't work with an sqlite backend, it is specific to postgres. Attempting
+to use it will result in an sqlite error, complaining about a syntax error
+near ILIKE. Note that ILIKE is just a case-insensitive version of LIKE, in
+sqlite LIKE is already case-insensitive so it wouldn't change anything.
+
+Note that using REGEXP is not a syntax error, the complaint here is: no
+such function REGEXP. So presumably setting up REGEXP as discussed on
+https://stackoverflow.com/questions/5071601/how-do-i-use-regex-in-a-sqlite-query
+would make it possible to use regular expressions with the sqlite backend.
+For a discussion on backend specific operators see
+https://stackoverflow.com/questions/11048143/example-of-persistent-with-backend-specific-operator.
+
+The @likeFilter@ can then be used in a select query like so:
 \begin{code}
 selectLike val field = selectList [likeFilter field val] []
+\end{code}
+with a full query looking like
+\begin{code}
+soapValuesLike dbfile fatNames = runSqlite dbfile $ do
+  runMigration migrateAll
+  selectLike fatNames SoapValueFatType  >>= return . Prelude.map entityVal
 \end{code}
 
 TODO: The result should be checked for completeness, ie all fatNames found
