@@ -3,6 +3,9 @@ required to make soap. It uses an sqlite database of oils with saponification
 coefficients and a gtk interface.
 
 At the same time testing literate haskell.
+Note: This is no good, too verbose. Better to use emacs
+org-mode and tangle source from there into a compact
+hs file.
 
 These language extensions and imports may not all be needed,
 this is just a copy-paste from an sql interface that works.
